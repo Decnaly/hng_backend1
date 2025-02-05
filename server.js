@@ -18,7 +18,7 @@ const isPrimeNum = (num) => {
 
 // Function to check if a number is a perfect number
 const isPerfectNum = (num) => {
-    if (num < 1) return false; // Negative numbers are not perfect numbers
+    if (num < 1) return false;
     let sum = 1;
     for (let i = 2; i <= Math.sqrt(num); i++) {
         if (num % i === 0) {
@@ -31,7 +31,7 @@ const isPerfectNum = (num) => {
 
 // Function to check if a number is an Armstrong number
 const isArmstrongNum = (num) => {
-    const absNum = Math.abs(num); // Take absolute value for negative numbers
+    const absNum = Math.abs(num); 
     const digits = absNum.toString().split("").map(Number);
     const sum = digits.reduce((acc, digit) => acc + Math.pow(digit, digits.length), 0);
     return sum === absNum;
@@ -56,26 +56,36 @@ app.get("/api/classify-number", async (req, res) => {
     const properties = [num % 2 === 0 ? "even" : "odd"];
     if (isArmstrongNum(num)) properties.unshift("armstrong");
 
-    // Prepare response object (send without waiting for fun fact)
-    const responseData = {
-        number: num,
-        is_prime: isPrimeNum(num),
-        is_perfect: isPerfectNum(num),
-        properties,
-        digit_sum: digitSum,
-        fun_fact: funFactCache[num] || "Loading..."
-    };
-
-    res.json(responseData);
-
-    // Fetch fun fact asynchronously if not in cache
-    if (!funFactCache[num]) {
-        try {
+    try {
+        // Fetch fun fact from API
+        let funFact;
+        if (funFactCache[num]) {
+            funFact = funFactCache[num];
+        } else {
             const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`);
-            funFactCache[num] = funFactResponse.data;
-        } catch (error) {
-            funFactCache[num] = "Fun fact unavailable";
+            funFact = funFactResponse.data;
+            funFactCache[num] = funFact; // Store in cache
         }
+
+        // Send response with fun fact
+        res.json({
+            number: num,
+            is_prime: isPrimeNum(num),
+            is_perfect: isPerfectNum(num),
+            properties,
+            digit_sum: digitSum,
+            fun_fact: funFact
+        });
+
+    } catch (error) {
+        res.json({
+            number: num,
+            is_prime: isPrimeNum(num),
+            is_perfect: isPerfectNum(num),
+            properties,
+            digit_sum: digitSum,
+            fun_fact: "Fun fact unavailable"
+        });
     }
 });
 
