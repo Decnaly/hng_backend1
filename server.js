@@ -32,17 +32,21 @@ const isPerfectNum = (num) => {
 
 // Function to check if a number is an Armstrong number
 const isArmstrongNum = (num) => {
-    const digits = num.toString().split("").map(Number);
-    const sum = digits.reduce((acc, digit) => acc + Math.pow(digit, digits.length), 0);
-    return sum === num;
+    const digits = Math.abs(num).toString().split("").map(Number);
+    const power = digits.length;
+    const sum = digits.reduce((acc, digit) => acc + Math.pow(digit, power), 0);
+    return sum === Math.abs(num);
 };
 
-// Function to get digit sum
+// Function to get digit sum (keeping negative sign)
 const getDigitSum = (num) => {
-    return Math.abs(num) // Convert negative numbers to positive
+    const absoluteSum = num
         .toString()
+        .replace("-", "") // Remove negative sign temporarily
         .split("")
         .reduce((acc, digit) => acc + parseInt(digit), 0);
+    
+    return num < 0 ? -absoluteSum : absoluteSum; // Return negative sum for negative numbers
 };
 
 app.get("/api/classify-number", async (req, res) => {
@@ -61,8 +65,11 @@ app.get("/api/classify-number", async (req, res) => {
     }
 
     const digitSum = getDigitSum(num);
-    const properties = [num % 2 === 0 ? "even" : "odd"];
-    if (isArmstrongNum(num)) properties.unshift("armstrong");
+    let properties = [num % 2 === 0 ? "even" : "odd"];
+
+    if (isArmstrongNum(num)) {
+        properties = ["armstrong", ...properties]; // Ensure "armstrong" appears first
+    }
 
     try {
         let funFact;
@@ -79,7 +86,7 @@ app.get("/api/classify-number", async (req, res) => {
             is_prime: isPrimeNum(num),
             is_perfect: isPerfectNum(num),
             properties,
-            digit_sum: digitSum,
+            digit_sum: digitSum, // Now supports negative digit sums
             fun_fact: funFact
         });
 
