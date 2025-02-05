@@ -18,6 +18,7 @@ const isPrimeNum = (num) => {
 
 // Function to check if a number is a perfect number
 const isPerfectNum = (num) => {
+    if (num < 1) return false; // Negative numbers are not perfect numbers
     let sum = 1;
     for (let i = 2; i <= Math.sqrt(num); i++) {
         if (num % i === 0) {
@@ -30,10 +31,19 @@ const isPerfectNum = (num) => {
 
 // Function to check if a number is an Armstrong number
 const isArmstrongNum = (num) => {
-    const digits = num.toString().split("").map(Number);
+    const absNum = Math.abs(num); // Take absolute value for negative numbers
+    const digits = absNum.toString().split("").map(Number);
     const sum = digits.reduce((acc, digit) => acc + Math.pow(digit, digits.length), 0);
-    return sum === num;
+    return sum === absNum;
 };
+
+// Function to calculate digit sum (ignoring negative sign)
+const getDigitSum = (num) => {
+    return Math.abs(num).toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+};
+
+// Cache to store fun facts for numbers
+const funFactCache = {};
 
 app.get("/api/classify-number", async (req, res) => {
     const { number } = req.query;
@@ -42,29 +52,30 @@ app.get("/api/classify-number", async (req, res) => {
     }
     
     const num = parseInt(number);
-    const digitSum = num.toString().split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+    const digitSum = getDigitSum(num);
     const properties = [num % 2 === 0 ? "even" : "odd"];
     if (isArmstrongNum(num)) properties.unshift("armstrong");
-    
-    try {
-        const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`);
-        res.json({
-            number: num,
-            is_prime: isPrimeNum(num),
-            is_perfect: isPerfectNum(num),
-            properties,
-            digit_sum: digitSum,
-            fun_fact: funFactResponse.data
-        });
-    } catch (error) {
-        res.json({
-            number: num,
-            is_prime: isPrimeNum(num),
-            is_perfect: isPerfectNum(num),
-            properties,
-            digit_sum: digitSum,
-            fun_fact: "Fun fact unavailable"
-        });
+
+    // Prepare response object (send without waiting for fun fact)
+    const responseData = {
+        number: num,
+        is_prime: isPrimeNum(num),
+        is_perfect: isPerfectNum(num),
+        properties,
+        digit_sum: digitSum,
+        fun_fact: funFactCache[num] || "Loading..."
+    };
+
+    res.json(responseData);
+
+    // Fetch fun fact asynchronously if not in cache
+    if (!funFactCache[num]) {
+        try {
+            const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`);
+            funFactCache[num] = funFactResponse.data;
+        } catch (error) {
+            funFactCache[num] = "Fun fact unavailable";
+        }
     }
 });
 
